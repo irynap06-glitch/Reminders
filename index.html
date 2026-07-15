@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f5f7fb" />
+  <title>Team Task Board</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">PROJECT MANAGEMENT</p>
+        <h1>Team Task Board</h1>
+        <p class="subtitle">Track ownership, task changes, completion time, and classified notes.</p>
+      </div>
+      <button class="primary-button" id="addTaskButton" type="button">
+        <span aria-hidden="true">＋</span> Add task
+      </button>
+    </header>
+
+    <section class="people-panel" aria-label="Team members">
+      <div class="section-label">People</div>
+      <div class="people-list" id="peopleList"></div>
+    </section>
+
+    <section class="filter-panel" aria-label="Task filters">
+      <label>
+        <span>Search</span>
+        <input id="searchFilter" type="search" placeholder="Task, assignee, or note" autocomplete="off" />
+      </label>
+      <label>
+        <span>Person</span>
+        <select id="assigneeFilter"></select>
+      </label>
+      <label>
+        <span>Date type</span>
+        <select id="dateFieldFilter">
+          <option value="activity">Any activity</option>
+          <option value="createdAt">Added to board</option>
+          <option value="updatedAt">Last changed</option>
+          <option value="completedAt">Completed</option>
+        </select>
+      </label>
+      <label>
+        <span>Date range</span>
+        <select id="datePresetFilter">
+          <option value="all">All dates</option>
+          <option value="today">Today</option>
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="custom">Custom range</option>
+        </select>
+      </label>
+      <label class="custom-date is-hidden" id="fromDateWrap">
+        <span>From</span>
+        <input id="fromDateFilter" type="date" />
+      </label>
+      <label class="custom-date is-hidden" id="toDateWrap">
+        <span>To</span>
+        <input id="toDateFilter" type="date" />
+      </label>
+      <button class="secondary-button clear-filter-button" id="clearFiltersButton" type="button">Clear filters</button>
+    </section>
+
+    <section class="summary-row" id="summaryRow" aria-live="polite"></section>
+
+    <section class="board" id="board" aria-label="Kanban board">
+      <article class="column" data-status="todo">
+        <header class="column-header">
+          <div>
+            <span class="status-dot todo-dot"></span>
+            <h2>To Do</h2>
+          </div>
+          <span class="count" id="todoCount">0</span>
+        </header>
+        <div class="task-list" id="todoList" data-status="todo"></div>
+      </article>
+
+      <article class="column" data-status="progress">
+        <header class="column-header">
+          <div>
+            <span class="status-dot progress-dot"></span>
+            <h2>In Progress</h2>
+          </div>
+          <span class="count" id="progressCount">0</span>
+        </header>
+        <div class="task-list" id="progressList" data-status="progress"></div>
+      </article>
+
+      <article class="column" data-status="done">
+        <header class="column-header">
+          <div>
+            <span class="status-dot done-dot"></span>
+            <h2>Completed</h2>
+          </div>
+          <span class="count" id="doneCount">0</span>
+        </header>
+        <div class="task-list" id="doneList" data-status="done"></div>
+      </article>
+    </section>
+  </main>
+
+  <div class="modal-backdrop is-hidden" id="taskModalBackdrop" role="presentation">
+    <section class="modal task-modal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow" id="taskModalEyebrow">TASK DETAILS</p>
+          <h2 id="taskModalTitle">Add task</h2>
+        </div>
+        <button class="icon-button" id="closeTaskModalButton" type="button" aria-label="Close task details">×</button>
+      </header>
+
+      <div class="modal-tabs is-hidden" id="modalTabs" role="tablist" aria-label="Task detail sections">
+        <button class="tab-button is-active" data-tab="details" type="button" role="tab">Details</button>
+        <button class="tab-button" data-tab="comments" type="button" role="tab">Notes <span id="commentTabCount">0</span></button>
+        <button class="tab-button" data-tab="activity" type="button" role="tab">Activity <span id="activityTabCount">0</span></button>
+      </div>
+
+      <form id="taskForm" class="modal-content">
+        <div class="tab-panel" data-panel="details">
+          <input id="taskId" type="hidden" />
+          <label>
+            <span>Task name</span>
+            <input id="taskTitle" type="text" maxlength="120" required placeholder="What needs to be done?" />
+          </label>
+          <div class="form-grid">
+            <label>
+              <span>Assigned to</span>
+              <select id="taskAssignee" required></select>
+            </label>
+            <label>
+              <span>Status</span>
+              <select id="taskStatus">
+                <option value="todo">To Do</option>
+                <option value="progress">In Progress</option>
+                <option value="done">Completed</option>
+              </select>
+            </label>
+            <label>
+              <span>Due date</span>
+              <input id="taskDueDate" type="date" />
+            </label>
+            <label>
+              <span>Priority</span>
+              <select id="taskPriority">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            <span>Description / main note</span>
+            <textarea id="taskDescription" rows="6" maxlength="3000" placeholder="Add full details. Line breaks are preserved."></textarea>
+          </label>
+          <div class="timestamp-grid is-hidden" id="taskTimestampGrid">
+            <div>
+              <span>Added to board</span>
+              <strong id="createdTimestamp">—</strong>
+            </div>
+            <div>
+              <span>Last changed</span>
+              <strong id="updatedTimestamp">—</strong>
+            </div>
+            <div>
+              <span>Last completed</span>
+              <strong id="completedTimestamp">—</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel is-hidden" data-panel="comments">
+          <section class="comment-composer">
+            <div class="form-grid comment-controls">
+              <label>
+                <span>Note type</span>
+                <select id="commentType">
+                  <option value="update">Update</option>
+                  <option value="clarification">Clarification</option>
+                  <option value="decision">Decision</option>
+                  <option value="blocker">Blocker</option>
+                  <option value="comment">Comment</option>
+                </select>
+              </label>
+              <label>
+                <span>Added by</span>
+                <select id="commentAuthor"></select>
+              </label>
+            </div>
+            <label>
+              <span>Note</span>
+              <textarea id="commentText" rows="4" maxlength="2000" placeholder="Add a clearly classified note or comment..."></textarea>
+            </label>
+            <button class="secondary-button" id="addCommentButton" type="button">Add timestamped note</button>
+          </section>
+          <div class="comment-list" id="commentList"></div>
+        </div>
+
+        <div class="tab-panel is-hidden" data-panel="activity">
+          <div class="timeline" id="activityTimeline"></div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="danger-button is-hidden" id="deleteTaskButton" type="button">Delete task</button>
+          <div class="modal-footer-actions">
+            <button class="secondary-button" id="cancelTaskButton" type="button">Cancel</button>
+            <button class="primary-button" id="saveTaskButton" type="submit">Save task</button>
+          </div>
+        </footer>
+      </form>
+    </section>
+  </div>
+
+  <div class="toast is-hidden" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
